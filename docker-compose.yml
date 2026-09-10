@@ -1,0 +1,45 @@
+# 用法：
+#   1. 复制 .env.example 为 .env，填好 GHCR_OWNER / GHCR_IMAGE
+#   2. docker compose pull && docker compose up -d
+#   3. 浏览器打开 http://127.0.0.1:8787
+#
+# 私有镜像需要先登录：docker login ghcr.io -u <用户名>
+# （密码用带 read:packages 权限的 GitHub PAT）
+
+services:
+  aws-batch-onboard:
+    image: ghcr.io/${GHCR_OWNER:?请在 .env 中设置 GHCR_OWNER}/${GHCR_IMAGE:-aws-batch-onboard}:${IMAGE_TAG:-latest}
+
+    # 本地改代码后想直接构建，注释掉上面的 image，启用下面这行：
+    # build: ./aws-batch-onboard
+
+    container_name: aws-batch-onboard
+    restart: unless-stopped
+
+    # 只绑定到宿主机回环地址。该服务持有 New API 管理员令牌，
+    # 需要对外访问时请改成 "8787:8787" 并在前面加反代 + 鉴权。
+    ports:
+      - "127.0.0.1:8787:8787"
+
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8787"
+
+    # 用项目自带的 /api/health 做存活检查
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request;urllib.request.urlopen('http://127.0.0.1:8787/api/health',timeout=3)
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+
+    # 无状态服务，加一层限制，降低被拿下后的影响面
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp

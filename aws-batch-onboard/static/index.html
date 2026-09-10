@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <title>New API · AWS 批量上号</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --bg-2: #111a2b;
+      --panel: #162033;
+      --panel-2: #1b2740;
+      --line: rgba(255, 255, 255, 0.08);
+      --text: #eef3fb;
+      --muted: #93a0b8;
+      --orange: #ff9900;
+      --orange-2: #ffb84d;
+      --green: #34d399;
+      --red: #fb7185;
+      --blue: #60a5fa;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(1200px 500px at 10% -10%, rgba(255, 153, 0, 0.16), transparent 50%),
+        radial-gradient(800px 400px at 90% 0%, rgba(96, 165, 250, 0.12), transparent 45%),
+        var(--bg);
+      color: var(--text);
+    }
+    .app { max-width: 1280px; margin: 0 auto; padding: 28px 20px 48px; }
+    header {
+      display: flex; justify-content: space-between; gap: 16px; align-items: flex-end;
+      margin-bottom: 22px;
+    }
+    .brand { display: flex; gap: 14px; align-items: center; }
+    .logo {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: linear-gradient(135deg, #ff9900, #ffb84d);
+      display: grid; place-items: center; font-weight: 800; color: #1b1304;
+      box-shadow: 0 8px 24px rgba(255, 153, 0, 0.28);
+    }
+    h1 { margin: 0; font-size: 24px; }
+    .subtitle { color: var(--muted); margin-top: 4px; font-size: 13px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 999px; background: rgba(255,153,0,.12);
+      color: var(--orange-2); font-size: 12px; border: 1px solid rgba(255,153,0,.25);
+    }
+    .grid { display: grid; grid-template-columns: 360px 1fr; gap: 16px; }
+    .card {
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      border: 1px solid var(--line); border-radius: 18px; padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .card h2 { margin: 0 0 14px; font-size: 15px; letter-spacing: .04em; }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 6px; }
+    input, select, textarea {
+      width: 100%; background: #0d1524; color: var(--text);
+      border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+      font: inherit; outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: rgba(255,153,0,.55); }
+    #modelMapping { min-height: 140px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .btn {
+      border: 0; border-radius: 10px; padding: 10px 14px; cursor: pointer;
+      font-weight: 650; font-size: 13px;
+    }
+    .btn-primary { background: linear-gradient(135deg, #ff9900, #f59e0b); color: #1b1304; }
+    .btn-ghost { background: rgba(255,255,255,.06); color: var(--text); }
+    .btn-danger { background: rgba(251,113,133,.16); color: #fecdd3; }
+    .btn[disabled] { opacity: .5; cursor: not-allowed; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; display: inline-block; }
+    .status-dot.ok { background: var(--green); box-shadow: 0 0 0 4px rgba(52,211,153,.16); }
+    .status-dot.bad { background: var(--red); }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .model-toolbar { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 8px; }
+    .model-toolbar .btn { padding: 6px 10px; font-size: 12px; }
+    .models {
+      display: flex; flex-direction: column; gap: 10px;
+      max-height: 320px; overflow: auto; padding-right: 4px;
+    }
+    .model-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .model-group h3 {
+      width: 100%; margin: 2px 0 0; font-size: 11px; color: var(--muted);
+      letter-spacing: .06em; font-weight: 650;
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 10px; border-radius: 999px; background: #0d1524;
+      border: 1px solid var(--line); font-size: 12px; cursor: pointer;
+    }
+    .chip input { width: auto; margin: 0; }
+    .chip.on { border-color: rgba(255,153,0,.5); background: rgba(255,153,0,.12); }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+    .stat { background: #0d1524; border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+    .stat b { display: block; font-size: 22px; margin-top: 4px; }
+    .progress {
+      height: 10px; background: #0d1524; border-radius: 999px; overflow: hidden;
+      border: 1px solid var(--line); margin: 8px 0 16px;
+    }
+    .progress > span {
+      display: block; height: 100%; width: 0;
+      background: linear-gradient(90deg, #ff9900, #34d399);
+      transition: width .25s ease;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; }
+    .pill { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-size: 11px; }
+    .ok { color: var(--green); }
+    .bad { color: var(--red); }
+    .wait { color: var(--blue); }
+    .log {
+      max-height: 220px; overflow: auto; background: #0a1220; border-radius: 12px;
+      padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px; line-height: 1.55; border: 1px solid var(--line);
+    }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .split { display: grid; grid-template-columns: 1.15fr .85fr; gap: 16px; }
+    .preview-wrap { max-height: 320px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
+    .toast {
+      position: fixed; right: 20px; bottom: 20px; padding: 12px 14px;
+      background: #111827; border: 1px solid var(--line); border-radius: 12px;
+      display: none; z-index: 20;
+    }
+    .switch { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; margin-top: 10px; }
+    .switch input { width: auto; }
+    @media (max-width: 1080px) {
+      .grid, .split, .stats, .row, .row-3 { grid-template-columns: 1fr; }
+      header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo">AWS</div>
+        <div>
+          <h1>New API 批量上号</h1>
+          <div class="subtitle">渠道类型固定为 AWS Bedrock · type = 33 · 密钥格式 AK|SK|Region 或 APIKey|Region</div>
+        </div>
+      </div>
+      <div class="badge"><span class="status-dot" id="connDot"></span><span id="connText">未连接</span></div>
+    </header>
+
+    <div class="grid">
+      <aside>
+        <section class="card">
+          <h2>1. 连接 New API</h2>
+          <label>站点地址</label>
+          <input id="baseUrl" placeholder="https://your-new-api.example.com" />
+          <label>管理员访问令牌</label>
+          <input id="token" type="password" placeholder="个人设置里的系统访问令牌" />
+          <label>用户 ID</label>
+          <input id="userId" placeholder="New-Api-User，例如 1" />
+          <div class="actions">
+            <button class="btn btn-primary" id="connectBtn">测试连接</button>
+            <button class="btn btn-ghost" id="saveBtn">保存到本地</button>
+          </div>
+          <p class="hint" id="connectHint" style="margin-top:10px">令牌来自 New API「个人设置 → 系统访问令牌」，用户 ID 必须和该令牌所属账号一致。</p>
+        </section>
+
+        <section class="card" style="margin-top:16px">
+          <h2>2. 渠道模板</h2>
+          <label>渠道名前缀</label>
+          <input id="namePrefix" value="AWS" placeholder="AWS" />
+          <p class="hint" id="nameHint" style="margin-top:6px">会自动拼接当前 Region，例如 AWS-us-east-1。</p>
+          <div class="row">
+            <div>
+              <label>密钥格式</label>
+              <select id="keyType">
+                <option value="ak_sk">AK / SK</option>
+                <option value="api_key">API Key</option>
+              </select>
+            </div>
+            <div>
+              <label>默认 Region（35 个）</label>
+              <select id="region">
+                <option value="__all__">全区域（每个 Key 展开到全部 Region）</option>
+                <option value="us-east-1" selected>us-east-1</option>
+                <option value="us-east-2">us-east-2</option>
+                <option value="us-west-1">us-west-1</option>
+                <option value="us-west-2">us-west-2</option>
+                <option value="ca-central-1">ca-central-1</option>
+                <option value="ca-west-1">ca-west-1</option>
+                <option value="eu-central-1">eu-central-1</option>
+                <option value="eu-central-2">eu-central-2</option>
+                <option value="eu-north-1">eu-north-1</option>
+                <option value="eu-south-1">eu-south-1</option>
+                <option value="eu-south-2">eu-south-2</option>
+                <option value="eu-west-1">eu-west-1</option>
+                <option value="eu-west-2">eu-west-2</option>
+                <option value="eu-west-3">eu-west-3</option>
+                <option value="ap-east-2">ap-east-2</option>
+                <option value="ap-northeast-1">ap-northeast-1</option>
+                <option value="ap-northeast-2">ap-northeast-2</option>
+                <option value="ap-northeast-3">ap-northeast-3</option>
+                <option value="ap-south-1">ap-south-1</option>
+                <option value="ap-south-2">ap-south-2</option>
+                <option value="ap-southeast-1">ap-southeast-1</option>
+                <option value="ap-southeast-2">ap-southeast-2</option>
+                <option value="ap-southeast-3">ap-southeast-3</option>
+                <option value="ap-southeast-4">ap-southeast-4</option>
+                <option value="ap-southeast-5">ap-southeast-5</option>
+                <option value="ap-southeast-6">ap-southeast-6</option>
+                <option value="ap-southeast-7">ap-southeast-7</option>
+                <option value="il-central-1">il-central-1</option>
+                <option value="me-central-1">me-central-1</option>
+                <option value="me-south-1">me-south-1</option>
+                <option value="af-south-1">af-south-1</option>
+                <option value="sa-east-1">sa-east-1</option>
+                <option value="mx-central-1">mx-central-1</option>
+                <option value="us-gov-east-1">us-gov-east-1</option>
+                <option value="us-gov-west-1">us-gov-west-1</option>
+              </select>
+            </div>
+          </div>
+          <label>添加模式</label>
+          <select id="addMode">
+            <option value="sequential">逐条创建（可视化进度）</option>
+            <option value="native_batch">一次批量提交</option>
+            <option value="multi_to_single">多密钥合成一个渠道</option>
+          </select>
+          <div class="row">
+            <div>
+              <label>分组</label>
+              <input id="group" value="default" />
+            </div>
+            <div>
+              <label>标签</label>
+              <input id="tag" placeholder="aws-batch" />
+            </div>
+          </div>
+          <div class="row-3">
+            <div>
+              <label>优先级</label>
+              <input id="priority" type="number" value="0" />
+            </div>
+            <div>
+              <label>权重</label>
+              <input id="weight" type="number" value="1" />
+            </div>
+            <div>
+              <label>测试模型</label>
+              <input id="testModel" value="claude-sonnet-4-6" />
+            </div>
+          </div>
+          <label>模型</label>
+          <div class="model-toolbar">
+            <button type="button" class="btn btn-primary" id="selectLatestBtn">选最新</button>
+            <button type="button" class="btn btn-ghost" id="selectAllBtn">全选</button>
+            <button type="button" class="btn btn-ghost" id="clearModelsBtn">清空</button>
+          </div>
+          <div class="models" id="modelChips"></div>
+          <label>额外模型（逗号分隔）</label>
+          <input id="extraModels" placeholder="自定义模型名，可选" />
+          <label>模型映射</label>
+          <div class="model-toolbar">
+            <button type="button" class="btn btn-primary" id="genMapBtn">根据已选生成</button>
+            <button type="button" class="btn btn-ghost" id="clearMapBtn">清空映射</button>
+          </div>
+          <textarea id="modelMapping" placeholder='{
+  "claude-opus-4-7": "global.anthropic.claude-opus-4-7",
+  "claude-opus-4-8": "global.anthropic.claude-opus-4-8",
+  "claude-sonnet-5": "global.anthropic.claude-sonnet-5"
+}'></textarea>
+          <p class="hint" id="mapHint">可手动填写 JSON。默认把请求模型映射到 global.anthropic.*，例如 claude-opus-4-8 → global.anthropic.claude-opus-4-8。</p>
+          <label class="switch"><input type="checkbox" id="autoMap" /> 勾选模型时自动覆盖映射</label>
+          <label class="switch"><input type="checkbox" id="testAfter" /> 上号后自动测活</label>
+        </section>
+      </aside>
+
+      <main>
+        <section class="card">
+          <h2>3. 账号列表</h2>
+          <p class="hint" id="formatHint"></p>
+          <textarea id="rawKeys" placeholder="每行一个账号"></textarea>
+          <div class="actions">
+            <button class="btn btn-ghost" id="parseBtn">解析预览</button>
+            <label class="btn btn-ghost" style="margin:0">
+              导入文件
+              <input id="fileInput" type="file" accept=".txt,.csv,.json" hidden />
+            </label>
+            <button class="btn btn-danger" id="clearBtn">清空</button>
+            <button class="btn btn-primary" id="startBtn">开始上号</button>
+          </div>
+          <div class="preview-wrap" style="margin-top:14px">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>渠道名</th>
+                  <th>Region</th>
+                  <th>标签</th>
+                  <th>密钥</th>
+                  <th>状态</th>
+                  <th>说明</th>
+                </tr>
+              </thead>
+              <tbody id="previewBody">
+                <tr><td colspan="7" class="hint">解析后会在这里显示。</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card" style="margin-top:16px">
+          <h2>4. 进度可视化</h2>
+          <div class="stats">
+            <div class="stat">待处理<b id="statTotal">0</b></div>
+            <div class="stat">成功<b class="ok" id="statOk">0</b></div>
+            <div class="stat">失败<b class="bad" id="statFail">0</b></div>
+            <div class="stat">已有 AWS 渠道<b id="statExisting">-</b></div>
+          </div>
+          <div class="progress"><span id="bar"></span></div>
+          <div class="split">
+            <div>
+              <div class="hint" style="margin-bottom:8px">运行日志</div>
+              <div class="log" id="log"></div>
+            </div>
+            <div>
+              <div class="hint" style="margin-bottom:8px">当前 New API 上的 AWS 渠道</div>
+              <div class="preview-wrap" style="max-height:220px">
+                <table>
+                  <thead><tr><th>ID</th><th>名称</th><th>状态</th><th>模型数</th></tr></thead>
+                  <tbody id="existingBody">
+                    <tr><td colspan="4" class="hint">连接后加载。</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const AWS_MODEL_GROUPS = [
+      {
+        title: "最新 Claude",
+        models: [
+          "claude-opus-4-8",
+          "claude-opus-4-8-thinking",
+          "claude-opus-4-7",
+          "claude-opus-4-7-thinking",
+          "claude-opus-4-6",
+          "claude-opus-4-6-thinking",
+          "claude-sonnet-4-6",
+          "claude-sonnet-4-6-thinking",
+          "claude-sonnet-5",
+          "claude-opus-5",
+          "claude-fable-5",
+          "claude-fable-5-1",
+          "claude-haiku-4-5",
+          "claude-haiku-4-5-20251001"
+        ]
+      },
+      {
+        title: "Claude 4.5 / 4.1 / 4",
+        models: [
+          "claude-opus-4-5-20251101",
+          "claude-opus-4-5-20251101-thinking",
+          "claude-sonnet-4-5-20250929",
+          "claude-sonnet-4-5-20250929-thinking",
+          "claude-opus-4-1-20250805",
+          "claude-opus-4-1-20250805-thinking",
+          "claude-opus-4-20250514",
+          "claude-opus-4-20250514-thinking",
+          "claude-sonnet-4-20250514",
+          "claude-sonnet-4-20250514-thinking"
+        ]
+      },
+      {
+        title: "Claude 3.x",
+        models: [
+          "claude-3-7-sonnet-20250219",
+          "claude-3-7-sonnet-20250219-thinking",
+          "claude-3-5-sonnet-20241022",
+          "claude-3-5-sonnet-20240620",
+          "claude-3-5-haiku-20241022",
+          "claude-3-opus-20240229",
+          "claude-3-sonnet-20240229",
+          "claude-3-haiku-20240307"
+        ]
+      },
+      {
+        title: "Amazon Nova",
+        models: [
+          "nova-premier-v1:0",
+          "nova-pro-v1:0",
+          "nova-lite-v1:0",
+          "nova-micro-v1:0",
+          "nova-canvas-v1:0",
+          "nova-reel-v1:1",
+          "nova-sonic-v1:0"
+        ]
+      }
+    ];
+    const AWS_REGION_GROUPS = [
+      ["美国 / 加拿大", ["us-east-1", "us-east-2", "us-west-1", "us-west-2", "ca-central-1", "ca-west-1"]],
+      ["欧洲", ["eu-central-1", "eu-central-2", "eu-north-1", "eu-south-1", "eu-south-2", "eu-west-1", "eu-west-2", "eu-west-3"]],
+      ["亚太", ["ap-east-2", "ap-northeast-1", "ap-northeast-2", "ap-northeast-3", "ap-south-1", "ap-south-2", "ap-southeast-1", "ap-southeast-2", "ap-southeast-3", "ap-southeast-4", "ap-southeast-5", "ap-southeast-6", "ap-southeast-7"]],
+      ["中东 / 非洲 / 南美", ["il-central-1", "me-central-1", "me-south-1", "af-south-1", "sa-east-1", "mx-central-1"]],
+      ["GovCloud", ["us-gov-east-1", "us-gov-west-1"]]
+    ];
+    const AWS_REGIONS = AWS_REGION_GROUPS.flatMap(([, regions]) => regions);
+    const REGION_SET = new Set(AWS_REGIONS);
+    const LATEST_MODELS = new Set(AWS_MODEL_GROUPS[0].models);
+    const DEFAULT_MODELS = new Set([
+      "claude-opus-4-8",
+      "claude-opus-4-7",
+      "claude-sonnet-4-6",
+      "claude-sonnet-4-6-thinking",
+      "claude-haiku-4-5-20251001",
+      "claude-sonnet-4-5-20250929"
+    ]);
+    const AWS_ID_MAP = {
+      "claude-3-sonnet-20240229": "anthropic.claude-3-sonnet-20240229-v1:0",
+      "claude-3-opus-20240229": "anthropic.claude-3-opus-20240229-v1:0",
+      "claude-3-haiku-20240307": "anthropic.claude-3-haiku-20240307-v1:0",
+      "claude-3-5-sonnet-20240620": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      "claude-3-5-sonnet-20241022": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      "claude-3-5-haiku-20241022": "anthropic.claude-3-5-haiku-20241022-v1:0",
+      "claude-3-7-sonnet-20250219": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "claude-sonnet-4-20250514": "anthropic.claude-sonnet-4-20250514-v1:0",
+      "claude-opus-4-20250514": "anthropic.claude-opus-4-20250514-v1:0",
+      "claude-opus-4-1-20250805": "anthropic.claude-opus-4-1-20250805-v1:0",
+      "claude-sonnet-4-5-20250929": "anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "claude-sonnet-4-6": "anthropic.claude-sonnet-4-6",
+      "claude-haiku-4-5-20251001": "anthropic.claude-haiku-4-5-20251001-v1:0",
+      "claude-opus-4-5-20251101": "anthropic.claude-opus-4-5-20251101-v1:0",
+      "claude-opus-4-6": "anthropic.claude-opus-4-6-v1",
+      "claude-opus-4-7": "anthropic.claude-opus-4-7",
+      "claude-opus-4-8": "anthropic.claude-opus-4-8",
+      "claude-haiku-4-5": "anthropic.claude-haiku-4-5",
+      "claude-sonnet-5": "anthropic.claude-sonnet-5",
+      "claude-opus-5": "anthropic.claude-opus-5",
+      "claude-fable-5": "anthropic.claude-fable-5",
+      "claude-fable-5-1": "anthropic.claude-fable-5-1",
+      "nova-micro-v1:0": "amazon.nova-micro-v1:0",
+      "nova-lite-v1:0": "amazon.nova-lite-v1:0",
+      "nova-pro-v1:0": "amazon.nova-pro-v1:0",
+      "nova-premier-v1:0": "amazon.nova-premier-v1:0"
+    };
+    const $ = (id) => document.getElementById(id);
+    const state = { accounts: [], running: false };
+
+    function toast(msg) {
+      const el = $("toast");
+      el.textContent = msg;
+      el.style.display = "block";
+      setTimeout(() => { el.style.display = "none"; }, 2400);
+    }
+
+    function log(msg, cls = "") {
+      const line = document.createElement("div");
+      if (cls) line.className = cls;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      $("log").appendChild(line);
+      $("log").scrollTop = $("log").scrollHeight;
+    }
+
+    function maskKey(key) {
+      const parts = String(key || "").split("|");
+      return parts.map((part, idx) => {
+        if (idx === parts.length - 1) return part;
+        if (part.length <= 6) return "*".repeat(part.length);
+        return part.slice(0, 4) + "…" + part.slice(-3);
+      }).join("|");
+    }
+
+    function checkedModels() {
+      const chips = [...document.querySelectorAll("#modelChips input:checked")].map((el) => el.value);
+      const extra = $("extraModels").value.split(",").map((s) => s.trim()).filter(Boolean);
+      return [...new Set([...chips, ...extra])];
+    }
+
+    function parseModelMapping() {
+      const raw = ($("modelMapping").value || "").trim();
+      if (!raw) return {};
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (err) {
+        throw new Error("模型映射必须是合法 JSON");
+      }
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("模型映射必须是 JSON 对象");
+      }
+      const mapping = {};
+      Object.entries(parsed).forEach(([from, to]) => {
+        const source = String(from || "").trim();
+        const target = String(to || "").trim();
+        if (source && target) mapping[source] = target;
+      });
+      return mapping;
+    }
+
+    function toGlobalModelId(model) {
+      const base = String(model || "").replace(/-thinking$/, "");
+      const awsId = AWS_ID_MAP[base] || AWS_ID_MAP[model];
+      if (awsId) return awsId.startsWith("global.") ? awsId : `global.${awsId}`;
+      if (base.startsWith("amazon.") || base.startsWith("nova-")) {
+        const novaId = base.startsWith("amazon.") ? base : `amazon.${base}`;
+        return `global.${novaId}`;
+      }
+      return `global.anthropic.${base}`;
+    }
+
+    function buildModelMapping(models) {
+      const mapping = {};
+      models.forEach((model) => {
+        mapping[model] = toGlobalModelId(model);
+      });
+      return mapping;
+    }
+
+    function fillMapping() {
+      const mapping = buildModelMapping(checkedModels());
+      $("modelMapping").value = Object.keys(mapping).length
+        ? JSON.stringify(mapping, null, 2)
+        : "";
+      updateMapHint();
+    }
+
+    function updateMapHint() {
+      try {
+        const mapping = parseModelMapping();
+        const count = Object.keys(mapping).length;
+        $("mapHint").textContent = count
+          ? `已配置 ${count} 条映射。请求左侧模型名时，会转到右侧 global.anthropic / Bedrock ID。可直接改 JSON。`
+          : "可手动填写 JSON。默认把请求模型映射到 global.anthropic.*，例如 claude-opus-4-8 → global.anthropic.claude-opus-4-8。";
+        $("mapHint").classList.remove("bad");
+      } catch (err) {
+        $("mapHint").textContent = err.message;
+        $("mapHint").classList.add("bad");
+      }
+    }
+
+    function selectedModels() {
+      const mapping = parseModelMapping();
+      return [...new Set([
+        ...checkedModels(),
+        ...Object.keys(mapping)
+      ])];
+    }
+
+    function renderRegions() {
+      const select = $("region");
+      if (!select) return;
+      const current = select.value || "us-east-1";
+      const allLabel = "全区域（每个 Key 展开到全部 Region）";
+      select.innerHTML = "";
+      const allOption = document.createElement("option");
+      allOption.value = "__all__";
+      allOption.textContent = allLabel;
+      select.appendChild(allOption);
+      AWS_REGIONS.forEach((name) => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+      });
+      select.value = AWS_REGIONS.includes(current) || current === "__all__" ? current : "us-east-1";
+    }
+
+    function renderChips() {
+      $("modelChips").innerHTML = AWS_MODEL_GROUPS.map((group) => `
+        <div class="model-group">
+          <h3>${group.title}</h3>
+          ${group.models.map((name) => `
+            <label class="chip ${DEFAULT_MODELS.has(name) ? "on" : ""}">
+              <input type="checkbox" value="${name}" ${DEFAULT_MODELS.has(name) ? "checked" : ""} />
+              ${name}
+            </label>
+          `).join("")}
+        </div>
+      `).join("");
+      $("modelChips").addEventListener("change", (e) => {
+        const chip = e.target.closest(".chip");
+        if (chip) chip.classList.toggle("on", e.target.checked);
+        if ($("autoMap").checked) fillMapping();
+      });
+    }
+
+    function setModelSelection(predicate) {
+      document.querySelectorAll("#modelChips input[type=checkbox]").forEach((el) => {
+        el.checked = predicate(el.value);
+        const chip = el.closest(".chip");
+        if (chip) chip.classList.toggle("on", el.checked);
+      });
+      if ($("autoMap").checked) fillMapping();
+    }
+
+    function updateFormatHint() {
+      const allRegions = $("region").value === "__all__";
+      if ($("keyType").value === "api_key") {
+        $("formatHint").textContent = allRegions
+          ? "每行一条：APIKey。选中全区域后，会把同一个 Key 展开成 APIKey|us-east-1、APIKey|us-east-2 等多个渠道。"
+          : "每行一条：APIKey|Region。也支持逗号/空格分隔；缺 Region 时用默认区域。";
+        return;
+      }
+      $("formatHint").textContent = allRegions
+        ? "每行一条：AccessKey|SecretAccessKey。选中全区域后，同一个 Key 会展开成 AK|SK|us-east-1、AK|SK|us-east-2 等多个渠道。"
+        : "每行一条：AccessKey|SecretAccessKey|Region。也支持 CSV / 逗号 / 空白分隔；缺 Region 时用默认区域。";
+    }
+
+    function looksLikeRegion(value) {
+      return REGION_SET.has(String(value || "").trim());
+    }
+
+    function parseLine(line, keyType) {
+      const raw = line.trim();
+      if (!raw || raw.startsWith("#")) return null;
+      const lower = raw.toLowerCase();
+      if (lower.startsWith("access") || lower.startsWith("ak,") || lower === "key,region") return null;
+      let parts = raw.includes("|")
+        ? raw.split("|")
+        : raw.includes(",")
+          ? raw.split(",")
+          : raw.split(/[\s\t]+/);
+      parts = parts.map((x) => x.trim()).filter(Boolean);
+      if (keyType === "api_key") {
+        const extraRegions = parts.slice(1).filter(looksLikeRegion);
+        if (!parts[0] || parts[0].startsWith("us-") || parts[0].startsWith("eu-") || parts[0].startsWith("ap-")) {
+          throw new Error("API Key 不能为空");
+        }
+        return { ak: parts[0], secret: "", extraRegions };
+      }
+      if (parts.length < 2) throw new Error("AK/SK 至少需要 AccessKey 和 SecretAccessKey");
+      const extraRegions = parts.slice(2).filter(looksLikeRegion);
+      return { ak: parts[0], secret: parts[1], extraRegions };
+    }
+
+    function buildKey(parsed, keyType, region) {
+      return keyType === "api_key"
+        ? `${parsed.ak}|${region}`
+        : `${parsed.ak}|${parsed.secret}|${region}`;
+    }
+
+    function targetRegions(parsed, selectedRegion) {
+      if (selectedRegion === "__all__") return AWS_REGIONS;
+      if (parsed.extraRegions.length) return parsed.extraRegions;
+      return [selectedRegion];
+    }
+
+    function stripRegionSuffix(value) {
+      const text = String(value || "").trim() || "AWS";
+      const sorted = [...AWS_REGIONS].sort((a, b) => b.length - a.length);
+      for (const region of sorted) {
+        if (text.endsWith(`-${region}`)) {
+          return text.slice(0, -(region.length + 1)) || "AWS";
+        }
+      }
+      return text;
+    }
+
+    function rawNamePrefix() {
+      return stripRegionSuffix($("namePrefix").value) || "AWS";
+    }
+
+    function withRegionSuffix(prefix, region) {
+      const base = stripRegionSuffix(prefix);
+      const regionName = String(region || "").trim();
+      if (!regionName || regionName === "__all__") return base;
+      return `${base}-${regionName}`;
+    }
+
+    function syncNamePrefixField() {
+      const raw = rawNamePrefix();
+      const region = $("region").value;
+      $("namePrefix").value = region === "__all__" ? raw : `${raw}-${region}`;
+      updateNameHint();
+    }
+
+    function updateNameHint() {
+      const prefix = rawNamePrefix();
+      const region = $("region").value;
+      $("nameHint").textContent = region === "__all__"
+        ? `全区域时会拼成 ${prefix}-us-east-1、${prefix}-eu-west-1 等。`
+        : `当前渠道名：${withRegionSuffix(prefix, region)}`;
+    }
+
+    function parseAccounts() {
+      const keyType = $("keyType").value;
+      const region = $("region").value;
+      const prefix = rawNamePrefix();
+      const lines = $("rawKeys").value.split(/\r?\n/);
+      const accounts = [];
+      const errors = [];
+      const usedNames = new Set();
+      lines.forEach((line, idx) => {
+        try {
+          const parsed = parseLine(line, keyType);
+          if (!parsed) return;
+          const akShort = parsed.ak.slice(0, 8);
+          const regions = targetRegions(parsed, region);
+          if (!regions.length) throw new Error("没有可用的 Region");
+          regions.forEach((itemRegion) => {
+            const key = buildKey(parsed, keyType, itemRegion);
+            const tag = $("tag").value.trim();
+            let name = withRegionSuffix($("namePrefix").value, itemRegion);
+            if (usedNames.has(name)) name = `${name}-${akShort}`;
+            usedNames.add(name);
+            accounts.push({
+              name,
+              key,
+              region: itemRegion,
+              tag,
+              masked: maskKey(key),
+              line: idx + 1
+            });
+          });
+        } catch (err) {
+          errors.push(`第 ${idx + 1} 行：${err.message}`);
+        }
+      });
+      state.accounts = accounts;
+      renderPreview(errors);
+      $("statTotal").textContent = accounts.length;
+      if (errors.length) toast(`有 ${errors.length} 行格式不对`);
+      return accounts;
+    }
+
+    function renderPreview(errors = []) {
+      if (!state.accounts.length && !errors.length) {
+        $("previewBody").innerHTML = `<tr><td colspan="7" class="hint">解析后会在这里显示。</td></tr>`;
+        return;
+      }
+      $("previewBody").innerHTML = [
+        ...state.accounts.map((item, i) => `
+          <tr data-index="${i}">
+            <td>${i + 1}</td>
+            <td>${item.name}</td>
+            <td>${item.region}</td>
+            <td class="mono">${item.tag || "-"}</td>
+            <td class="mono">${item.masked}</td>
+            <td class="wait">待处理</td>
+            <td></td>
+          </tr>
+        `),
+        ...errors.map((msg) => `<tr><td></td><td colspan="6" class="bad">${msg}</td></tr>`)
+      ].join("");
+    }
+
+    function updateRow(index, ok, message) {
+      const row = document.querySelector(`tr[data-index="${index}"]`);
+      if (!row) return;
+      row.children[5].className = ok ? "ok" : "bad";
+      row.children[5].textContent = ok ? "成功" : "失败";
+      row.children[6].textContent = message || "";
+    }
+
+    function setConn(ok, text) {
+      $("connDot").className = "status-dot " + (ok ? "ok" : "bad");
+      $("connText").textContent = text;
+    }
+
+    async function proxy(path, method = "GET", body) {
+      const res = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          base_url: $("baseUrl").value.trim(),
+          token: $("token").value.trim(),
+          user_id: $("userId").value.trim(),
+          path,
+          method,
+          body
+        })
+      });
+      return res.json();
+    }
+
+    function channelTemplate() {
+      const mapping = parseModelMapping();
+      const models = selectedModels();
+      if (!checkedModels().length) throw new Error("至少选择一个模型");
+      return {
+        type: 33,
+        name: $("namePrefix").value.trim() || "AWS",
+        group: $("group").value.trim() || "default",
+        tag: null,
+        models: models.join(","),
+        model_mapping: Object.keys(mapping).length ? JSON.stringify(mapping) : null,
+        test_model: $("testModel").value.trim() || checkedModels()[0],
+        priority: Number($("priority").value || 0),
+        weight: Number($("weight").value || 1),
+        auto_ban: 1,
+        status: 1,
+        settings: JSON.stringify({ aws_key_type: $("keyType").value })
+      };
+    }
+
+    async function connect() {
+      const data = await proxy("/api/channel/?p=1&page_size=20&id_sort=true&type=33", "GET");
+      if (!data.success) {
+        setConn(false, data.message || "连接失败");
+        throw new Error(data.message || "连接失败");
+      }
+      const payload = data.data || {};
+      const items = payload.items || payload || [];
+      const list = Array.isArray(items) ? items : [];
+      $("statExisting").textContent = payload.total ?? list.length;
+      $("existingBody").innerHTML = list.length
+        ? list.map((ch) => `
+            <tr>
+              <td>${ch.id}</td>
+              <td>${ch.name}</td>
+              <td>${ch.status === 1 ? "启用" : "禁用"}</td>
+              <td>${String(ch.models || "").split(",").filter(Boolean).length}</td>
+            </tr>
+          `).join("")
+        : `<tr><td colspan="4" class="hint">还没有 AWS 渠道。</td></tr>`;
+      setConn(true, `已连接 · AWS 渠道 ${payload.total ?? list.length} 个`);
+      log(`连接成功，当前 AWS 渠道 ${payload.total ?? list.length} 个`, "ok");
+    }
+
+    async function startOnboard() {
+      const accounts = parseAccounts();
+      if (!accounts.length) {
+        toast("没有可上号的账号");
+        return;
+      }
+      const mode = $("addMode").value;
+      state.running = true;
+      $("startBtn").disabled = true;
+      $("statOk").textContent = "0";
+      $("statFail").textContent = "0";
+      $("bar").style.width = "0%";
+      log(`开始上号，共 ${accounts.length} 个账号，模式 ${mode}`);
+      try {
+        if (mode === "multi_to_single") await createMulti(accounts);
+        else if (mode === "native_batch") await createNativeBatch(accounts);
+        else await createSequential(accounts);
+        if ($("testAfter").checked) await testCreated(accounts);
+        await connect().catch(() => {});
+      } finally {
+        state.running = false;
+        $("startBtn").disabled = false;
+      }
+    }
+
+    function recordItem(index, account, data) {
+      const ok = !!data.success;
+      updateRow(index, ok, data.message || (ok ? `成功 · ${account.tag || "-"}` : "失败"));
+      $("statOk").textContent = String(Number($("statOk").textContent) + (ok ? 1 : 0));
+      $("statFail").textContent = String(Number($("statFail").textContent) + (ok ? 0 : 1));
+      const done = Number($("statOk").textContent) + Number($("statFail").textContent);
+      $("bar").style.width = `${Math.round(done / Math.max(state.accounts.length, 1) * 100)}%`;
+      log(`${account.name} ${ok ? "成功" : "失败"} 标签 ${account.tag || "-"} ${data.message || ""}`, ok ? "ok" : "bad");
+      return ok;
+    }
+
+    async function createSequential(accounts) {
+      const base = channelTemplate();
+      for (let i = 0; i < accounts.length; i++) {
+        const account = accounts[i];
+        const data = await proxy("/api/channel/", "POST", {
+          mode: "single",
+          channel: {
+            ...base,
+            name: account.name,
+            key: account.key,
+            tag: account.tag || null
+          }
+        });
+        recordItem(i, account, data);
+        if (i < accounts.length - 1) await new Promise((resolve) => setTimeout(resolve, 180));
+      }
+    }
+
+    async function createNativeBatch(accounts) {
+      const groups = new Map();
+      accounts.forEach((acc, i) => {
+        const key = `${acc.tag || "_"}|${acc.region}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push({ acc, i });
+      });
+      const base = channelTemplate();
+      for (const [, items] of groups) {
+        const account = items[0].acc;
+        const data = await proxy("/api/channel/", "POST", {
+          mode: "batch",
+          batch_add_set_key_prefix_2_name: true,
+          channel: {
+            ...base,
+            name: account.name,
+            key: items.map((x) => x.acc.key).join("\n"),
+            tag: account.tag || null
+          }
+        });
+        items.forEach(({ acc, i }) => recordItem(i, acc, data));
+      }
+    }
+
+    async function testCreated(accounts) {
+      const names = new Set(accounts.map((item) => item.name));
+      const data = await proxy("/api/channel/?p=1&page_size=100&id_sort=true&type=33", "GET");
+      const payload = data.data || {};
+      const list = payload.items || (Array.isArray(payload) ? payload : []);
+      const testModel = $("testModel").value.trim();
+      for (const item of list) {
+        if (!names.has(item.name)) continue;
+        const path = testModel ? `/api/channel/test/${item.id}?model=${encodeURIComponent(testModel)}` : `/api/channel/test/${item.id}`;
+        const result = await proxy(path, "GET");
+        log(`测活 ${item.name} ${result.success ? "通过" : "失败"} ${result.message || ""} (${result.time || 0}s)`, result.success ? "ok" : "bad");
+      }
+    }
+
+    async function createMulti(accounts) {
+      const groups = new Map();
+      accounts.forEach((acc, i) => {
+        const key = acc.tag || acc.region || "_";
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push({ acc, i });
+      });
+      let okCount = 0;
+      let failCount = 0;
+      for (const [tag, items] of groups) {
+        const channel = channelTemplate();
+        const region = items[0].acc.region || "multi";
+        channel.tag = tag && tag !== "_" ? tag : null;
+        channel.key = items.map((x) => x.acc.key).join("\n");
+        channel.name = withRegionSuffix($("namePrefix").value.trim() || "AWS", region);
+        const data = await proxy("/api/channel/", "POST", {
+          mode: "multi_to_single",
+          multi_key_mode: "random",
+          channel
+        });
+        items.forEach(({ i }) => updateRow(i, !!data.success, data.message || (data.success ? `已写入 ${channel.tag || channel.name}` : "失败")));
+        if (data.success) okCount += items.length;
+        else failCount += items.length;
+        log(data.success ? `已把 ${items.length} 个密钥写入 ${channel.name}，标签 ${channel.tag || "-"}` : (data.message || "失败"), data.success ? "ok" : "bad");
+      }
+      $("statOk").textContent = String(okCount);
+      $("statFail").textContent = String(failCount);
+      $("bar").style.width = "100%";
+      if (okCount) await connect().catch(() => {});
+    }
+
+    function loadLocal() {
+      try {
+        const saved = JSON.parse(localStorage.getItem("aws-batch-onboard") || "{}");
+        ["baseUrl", "token", "userId", "namePrefix", "group", "tag", "modelMapping"].forEach((id) => {
+          if (saved[id]) $(id).value = saved[id];
+        });
+      } catch {}
+    }
+
+    $("keyType").addEventListener("change", () => { updateFormatHint(); parseAccounts(); });
+    $("region").addEventListener("change", () => {
+      syncNamePrefixField();
+      updateFormatHint();
+      parseAccounts();
+    });
+    $("namePrefix").addEventListener("input", () => { updateNameHint(); parseAccounts(); });
+    $("tag").addEventListener("input", parseAccounts);
+    $("selectLatestBtn").addEventListener("click", () => setModelSelection((name) => LATEST_MODELS.has(name)));
+    $("selectAllBtn").addEventListener("click", () => setModelSelection(() => true));
+    $("clearModelsBtn").addEventListener("click", () => setModelSelection(() => false));
+    $("genMapBtn").addEventListener("click", () => { fillMapping(); toast("已根据已选模型生成映射"); });
+    $("clearMapBtn").addEventListener("click", () => { $("modelMapping").value = ""; updateMapHint(); });
+    $("modelMapping").addEventListener("input", updateMapHint);
+    $("extraModels").addEventListener("input", () => { if ($("autoMap").checked) fillMapping(); });
+    $("parseBtn").addEventListener("click", parseAccounts);
+    $("clearBtn").addEventListener("click", () => {
+      $("rawKeys").value = "";
+      state.accounts = [];
+      renderPreview();
+      $("statTotal").textContent = "0";
+    });
+    $("fileInput").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      $("rawKeys").value = await file.text();
+      parseAccounts();
+    });
+    $("connectBtn").addEventListener("click", async () => {
+      try { await connect(); toast("连接成功"); }
+      catch (err) { toast(err.message); log(err.message, "bad"); }
+    });
+    $("saveBtn").addEventListener("click", () => {
+      localStorage.setItem("aws-batch-onboard", JSON.stringify({
+        baseUrl: $("baseUrl").value,
+        token: $("token").value,
+        userId: $("userId").value,
+        namePrefix: $("namePrefix").value,
+        group: $("group").value,
+        tag: $("tag").value,
+        modelMapping: $("modelMapping").value
+      }));
+      toast("已保存到本机浏览器");
+    });
+    $("startBtn").addEventListener("click", async () => {
+      try { await startOnboard(); }
+      catch (err) {
+        state.running = false;
+        $("startBtn").disabled = false;
+        toast(err.message);
+        log(err.message, "bad");
+      }
+    });
+
+    renderRegions();
+    renderChips();
+    updateFormatHint();
+    loadLocal();
+    syncNamePrefixField();
+    parseAccounts();
+    if (!$("modelMapping").value.trim()) fillMapping();
+    else updateMapHint();
+  </script>
+</body>
+</html>

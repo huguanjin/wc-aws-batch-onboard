@@ -1,0 +1,6 @@
+# 每行一个 AWS 账号
+# AK/SK: AccessKey|SecretAccessKey|Region
+# API Key: APIKey|Region
+
+AKIAEXAMPLE0001|wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY|us-east-1
+AKIAEXAMPLE0002|wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY|us-west-2
