@@ -18,7 +18,6 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
-DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8787
 ALLOWED_API_PREFIXES = ("/api/",)
 REQUEST_TIMEOUT = 60
@@ -323,17 +322,13 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    host = os.environ.get("HOST") or DEFAULT_HOST
     port = int(os.environ.get("PORT") or DEFAULT_PORT)
     if not (STATIC / "index.html").is_file():
         print("缺少 static/index.html", file=sys.stderr)
         sys.exit(1)
-    server = ThreadingHTTPServer((host, port), Handler)
-    print(f"AWS 批量上号面板: http://{host}:{port}")
-    if host in ("127.0.0.1", "localhost"):
-        print("仅监听本机。请使用你自己的 New API 管理员访问令牌。")
-    else:
-        print(f"监听 {host}，请确保前面有反向代理和访问控制。")
+    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    print(f"AWS 批量上号面板: http://127.0.0.1:{port}")
+    print("仅监听本机。请使用你自己的 New API 管理员访问令牌。")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

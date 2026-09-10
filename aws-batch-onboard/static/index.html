@@ -132,6 +132,30 @@
     }
     .switch { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; margin-top: 10px; }
     .switch input { width: auto; }
+    .region-combo { position: relative; }
+    .region-combo input { padding-right: 28px; }
+    .region-combo::after {
+      content: ""; position: absolute; right: 12px; top: 50%; width: 0; height: 0;
+      border-left: 5px solid transparent; border-right: 5px solid transparent;
+      border-top: 6px solid var(--muted); transform: translateY(-50%); pointer-events: none;
+    }
+    .region-menu {
+      position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 40;
+      min-width: 240px; max-height: 260px; overflow: auto;
+      background: #0d1524; border: 1px solid rgba(255,153,0,.35); border-radius: 12px;
+      box-shadow: var(--shadow); padding: 6px;
+    }
+    .region-menu[hidden] { display: none; }
+    .region-group {
+      font-size: 11px; color: var(--muted); padding: 8px 8px 4px; letter-spacing: .06em;
+    }
+    .region-option {
+      display: block; width: 100%; text-align: left; border: 0; background: transparent;
+      color: var(--text); padding: 8px 10px; border-radius: 8px; cursor: pointer; font: inherit; font-size: 12px;
+    }
+    .region-option:hover, .region-option.active { background: rgba(255,153,0,.16); }
+    .region-option.current { color: var(--orange-2); }
+    .region-empty { color: var(--muted); padding: 10px; font-size: 12px; }
     @media (max-width: 1080px) {
       .grid, .split, .stats, .row, .row-3 { grid-template-columns: 1fr; }
       header { flex-direction: column; align-items: flex-start; }
@@ -182,45 +206,15 @@
               </select>
             </div>
             <div>
-              <label>默认 Region（35 个）</label>
-              <select id="region">
-                <option value="__all__">全区域（每个 Key 展开到全部 Region）</option>
-                <option value="us-east-1" selected>us-east-1</option>
-                <option value="us-east-2">us-east-2</option>
-                <option value="us-west-1">us-west-1</option>
-                <option value="us-west-2">us-west-2</option>
-                <option value="ca-central-1">ca-central-1</option>
-                <option value="ca-west-1">ca-west-1</option>
-                <option value="eu-central-1">eu-central-1</option>
-                <option value="eu-central-2">eu-central-2</option>
-                <option value="eu-north-1">eu-north-1</option>
-                <option value="eu-south-1">eu-south-1</option>
-                <option value="eu-south-2">eu-south-2</option>
-                <option value="eu-west-1">eu-west-1</option>
-                <option value="eu-west-2">eu-west-2</option>
-                <option value="eu-west-3">eu-west-3</option>
-                <option value="ap-east-2">ap-east-2</option>
-                <option value="ap-northeast-1">ap-northeast-1</option>
-                <option value="ap-northeast-2">ap-northeast-2</option>
-                <option value="ap-northeast-3">ap-northeast-3</option>
-                <option value="ap-south-1">ap-south-1</option>
-                <option value="ap-south-2">ap-south-2</option>
-                <option value="ap-southeast-1">ap-southeast-1</option>
-                <option value="ap-southeast-2">ap-southeast-2</option>
-                <option value="ap-southeast-3">ap-southeast-3</option>
-                <option value="ap-southeast-4">ap-southeast-4</option>
-                <option value="ap-southeast-5">ap-southeast-5</option>
-                <option value="ap-southeast-6">ap-southeast-6</option>
-                <option value="ap-southeast-7">ap-southeast-7</option>
-                <option value="il-central-1">il-central-1</option>
-                <option value="me-central-1">me-central-1</option>
-                <option value="me-south-1">me-south-1</option>
-                <option value="af-south-1">af-south-1</option>
-                <option value="sa-east-1">sa-east-1</option>
-                <option value="mx-central-1">mx-central-1</option>
-                <option value="us-gov-east-1">us-gov-east-1</option>
-                <option value="us-gov-west-1">us-gov-west-1</option>
-              </select>
+              <label>默认 Region（35 个，可搜索）</label>
+              <div class="region-combo">
+                <input id="regionSearch" type="search" autocomplete="off" spellcheck="false" placeholder="搜索 tokyo / 东京 / eu-west" />
+                <div class="region-menu" id="regionMenu" hidden></div>
+                <select id="region" hidden>
+                  <option value="__all__">全区域（每个 Key 展开到全部 Region）</option>
+                  <option value="us-east-1" selected>us-east-1</option>
+                </select>
+              </div>
             </div>
           </div>
           <label>添加模式</label>
@@ -246,11 +240,11 @@
             </div>
             <div>
               <label>权重</label>
-              <input id="weight" type="number" value="1" />
+              <input id="weight" type="number" value="0" />
             </div>
             <div>
               <label>测试模型</label>
-              <input id="testModel" value="claude-sonnet-4-6" />
+              <input id="testModel" value="claude-opus-4-8" />
             </div>
           </div>
           <label>模型</label>
@@ -272,9 +266,12 @@
   "claude-opus-4-8": "global.anthropic.claude-opus-4-8",
   "claude-sonnet-5": "global.anthropic.claude-sonnet-5"
 }'></textarea>
-          <p class="hint" id="mapHint">可手动填写 JSON。默认把请求模型映射到 global.anthropic.*，例如 claude-opus-4-8 → global.anthropic.claude-opus-4-8。</p>
-          <label class="switch"><input type="checkbox" id="autoMap" /> 勾选模型时自动覆盖映射</label>
-          <label class="switch"><input type="checkbox" id="testAfter" /> 上号后自动测活</label>
+          <p class="hint" id="mapHint">勾选模型后会自动生成映射，不用先清空再点生成。例如 claude-opus-4-8 → global.anthropic.claude-opus-4-8。</p>
+          <label class="switch"><input type="checkbox" id="autoMap" checked /> 勾选模型时自动覆盖映射</label>
+          <label class="switch"><input type="checkbox" id="testAfter" checked /> 上号后自动测活</label>
+          <p class="hint" id="poolHint" style="margin-top:6px">先以禁用写入，测活成功才启用进路由池；失败的不会被调度。</p>
+          <label class="switch"><input type="checkbox" id="deleteFailed" /> 测活失败后删除渠道</label>
+          <p class="hint" id="deleteHint" style="margin-top:6px">会测完该渠道全部模型。全部失败才删渠道；有成功的只去掉失败模型。</p>
         </section>
       </aside>
 
@@ -316,7 +313,7 @@
           <h2>4. 进度可视化</h2>
           <div class="stats">
             <div class="stat">待处理<b id="statTotal">0</b></div>
-            <div class="stat">成功<b class="ok" id="statOk">0</b></div>
+            <div class="stat">已入池<b class="ok" id="statOk">0</b></div>
             <div class="stat">失败<b class="bad" id="statFail">0</b></div>
             <div class="stat">已有 AWS 渠道<b id="statExisting">-</b></div>
           </div>
@@ -415,14 +412,49 @@
     ];
     const AWS_REGIONS = AWS_REGION_GROUPS.flatMap(([, regions]) => regions);
     const REGION_SET = new Set(AWS_REGIONS);
+    const REGION_ALIASES = {
+      "__all__": "all 全区域 全部",
+      "us-east-1": "virginia 弗吉尼亚 美东",
+      "us-east-2": "ohio 俄亥俄",
+      "us-west-1": "california 加州 北加州",
+      "us-west-2": "oregon 俄勒冈",
+      "ca-central-1": "canada montreal 加拿大 蒙特利尔",
+      "ca-west-1": "calgary 卡尔加里",
+      "eu-central-1": "frankfurt 法兰克福",
+      "eu-central-2": "zurich 苏黎世",
+      "eu-north-1": "stockholm 斯德哥尔摩",
+      "eu-south-1": "milan 米兰",
+      "eu-south-2": "spain 西班牙",
+      "eu-west-1": "ireland 爱尔兰",
+      "eu-west-2": "london 伦敦",
+      "eu-west-3": "paris 巴黎",
+      "ap-east-2": "taipei 台北 台湾",
+      "ap-northeast-1": "tokyo tokyo 东京 日本",
+      "ap-northeast-2": "seoul 首尔 韩国",
+      "ap-northeast-3": "osaka 大阪",
+      "ap-south-1": "mumbai 孟买 印度",
+      "ap-south-2": "hyderabad 海得拉巴",
+      "ap-southeast-1": "singapore 新加坡",
+      "ap-southeast-2": "sydney 悉尼 澳洲",
+      "ap-southeast-3": "jakarta 雅加达",
+      "ap-southeast-4": "melbourne 墨尔本",
+      "ap-southeast-5": "malaysia 马来西亚",
+      "ap-southeast-6": "new zealand 新西兰",
+      "ap-southeast-7": "thailand 泰国",
+      "il-central-1": "israel 以色列",
+      "me-central-1": "uae 阿联酋",
+      "me-south-1": "bahrain 巴林",
+      "af-south-1": "cape town 开普敦 南非",
+      "sa-east-1": "sao paulo 圣保罗 巴西",
+      "mx-central-1": "mexico 墨西哥",
+      "us-gov-east-1": "gov 政府",
+      "us-gov-west-1": "gov 政府"
+    };
     const LATEST_MODELS = new Set(AWS_MODEL_GROUPS[0].models);
     const DEFAULT_MODELS = new Set([
       "claude-opus-4-8",
       "claude-opus-4-7",
-      "claude-sonnet-4-6",
-      "claude-sonnet-4-6-thinking",
-      "claude-haiku-4-5-20251001",
-      "claude-sonnet-4-5-20250929"
+      "claude-sonnet-5"
     ]);
     const AWS_ID_MAP = {
       "claude-3-sonnet-20240229": "anthropic.claude-3-sonnet-20240229-v1:0",
@@ -453,7 +485,7 @@
       "nova-premier-v1:0": "amazon.nova-premier-v1:0"
     };
     const $ = (id) => document.getElementById(id);
-    const state = { accounts: [], running: false };
+    const state = { accounts: [], running: false, regionHits: [], regionActive: 0 };
 
     function toast(msg) {
       const el = $("toast");
@@ -533,13 +565,17 @@
       updateMapHint();
     }
 
+    function syncMapping() {
+      if ($("autoMap").checked) fillMapping();
+    }
+
     function updateMapHint() {
       try {
         const mapping = parseModelMapping();
         const count = Object.keys(mapping).length;
         $("mapHint").textContent = count
-          ? `已配置 ${count} 条映射。请求左侧模型名时，会转到右侧 global.anthropic / Bedrock ID。可直接改 JSON。`
-          : "可手动填写 JSON。默认把请求模型映射到 global.anthropic.*，例如 claude-opus-4-8 → global.anthropic.claude-opus-4-8。";
+          ? `已按当前勾选生成 ${count} 条映射。改选模型会自动更新，不用先清空再生成。`
+          : "还没有映射。勾选模型后会自动生成 global.anthropic.* 映射。";
         $("mapHint").classList.remove("bad");
       } catch (err) {
         $("mapHint").textContent = err.message;
@@ -555,23 +591,93 @@
       ])];
     }
 
+    function regionCatalog() {
+      return [
+        { value: "__all__", label: "全区域（每个 Key 展开到全部 Region）", group: "快捷", keywords: REGION_ALIASES.__all__ },
+        ...AWS_REGION_GROUPS.flatMap(([group, regions]) => regions.map((name) => ({
+          value: name,
+          label: name,
+          group,
+          keywords: `${name} ${group} ${REGION_ALIASES[name] || ""}`
+        })))
+      ];
+    }
+
+    function regionLabel(value) {
+      if (value === "__all__") return "全区域（每个 Key 展开到全部 Region）";
+      return value || "us-east-1";
+    }
+
+    function setRegionValue(value, silent) {
+      const next = value === "__all__" || AWS_REGIONS.includes(value) ? value : "us-east-1";
+      const select = $("region");
+      if (select.value !== next) select.value = next;
+      $("regionSearch").value = regionLabel(next);
+      if (!silent) select.dispatchEvent(new Event("change"));
+    }
+
+    function filterRegions(query) {
+      const text = String(query || "").trim().toLowerCase();
+      const items = regionCatalog();
+      if (!text) return items;
+      return items.filter((item) => `${item.label} ${item.keywords}`.toLowerCase().includes(text));
+    }
+
+    function renderRegionMenu(query) {
+      const menu = $("regionMenu");
+      const matched = filterRegions(query);
+      const current = $("region").value;
+      if (!matched.length) {
+        menu.innerHTML = `<div class="region-empty">没有匹配的 Region</div>`;
+        state.regionHits = [];
+        state.regionActive = -1;
+        return;
+      }
+      let html = "";
+      let lastGroup = "";
+      matched.forEach((item, index) => {
+        if (item.group !== lastGroup) {
+          html += `<div class="region-group">${item.group}</div>`;
+          lastGroup = item.group;
+        }
+        html += `<button type="button" class="region-option${item.value === current ? " current" : ""}" data-index="${index}" data-value="${item.value}">${item.label}</button>`;
+      });
+      menu.innerHTML = html;
+      state.regionHits = matched;
+      state.regionActive = Math.max(0, matched.findIndex((item) => item.value === current));
+      highlightRegionOption();
+    }
+
+    function highlightRegionOption() {
+      const buttons = [...$("regionMenu").querySelectorAll(".region-option")];
+      buttons.forEach((btn, index) => {
+        btn.classList.toggle("active", index === state.regionActive);
+        if (index === state.regionActive) btn.scrollIntoView({ block: "nearest" });
+      });
+    }
+
+    function openRegionMenu() {
+      $("regionMenu").hidden = false;
+      renderRegionMenu($("regionSearch").value === regionLabel($("region").value) ? "" : $("regionSearch").value);
+    }
+
+    function closeRegionMenu() {
+      $("regionMenu").hidden = true;
+      $("regionSearch").value = regionLabel($("region").value);
+    }
+
     function renderRegions() {
       const select = $("region");
       if (!select) return;
       const current = select.value || "us-east-1";
-      const allLabel = "全区域（每个 Key 展开到全部 Region）";
       select.innerHTML = "";
-      const allOption = document.createElement("option");
-      allOption.value = "__all__";
-      allOption.textContent = allLabel;
-      select.appendChild(allOption);
-      AWS_REGIONS.forEach((name) => {
+      regionCatalog().forEach((item) => {
         const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
+        option.value = item.value;
+        option.textContent = item.label;
         select.appendChild(option);
       });
-      select.value = AWS_REGIONS.includes(current) || current === "__all__" ? current : "us-east-1";
+      setRegionValue(current, true);
     }
 
     function renderChips() {
@@ -589,7 +695,7 @@
       $("modelChips").addEventListener("change", (e) => {
         const chip = e.target.closest(".chip");
         if (chip) chip.classList.toggle("on", e.target.checked);
-        if ($("autoMap").checked) fillMapping();
+        syncMapping();
       });
     }
 
@@ -599,7 +705,7 @@
         const chip = el.closest(".chip");
         if (chip) chip.classList.toggle("on", el.checked);
       });
-      if ($("autoMap").checked) fillMapping();
+      syncMapping();
     }
 
     function updateFormatHint() {
@@ -753,11 +859,16 @@
       ].join("");
     }
 
-    function updateRow(index, ok, message) {
+    function updateRow(index, ok, message, label) {
       const row = document.querySelector(`tr[data-index="${index}"]`);
       if (!row) return;
-      row.children[5].className = ok ? "ok" : "bad";
-      row.children[5].textContent = ok ? "成功" : "失败";
+      if (ok === null) {
+        row.children[5].className = "wait";
+        row.children[5].textContent = label || "待测活";
+      } else {
+        row.children[5].className = ok ? "ok" : "bad";
+        row.children[5].textContent = label || (ok ? "已入池" : "失败");
+      }
       row.children[6].textContent = message || "";
     }
 
@@ -766,7 +877,7 @@
       $("connText").textContent = text;
     }
 
-    async function proxy(path, method = "GET", body) {
+    async function proxy(path, method = "GET", body, timeout) {
       const res = await fetch("/api/proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -776,10 +887,31 @@
           user_id: $("userId").value.trim(),
           path,
           method,
-          body
+          body,
+          timeout
         })
       });
       return res.json();
+    }
+
+    function holdForPool() {
+      return $("testAfter").checked;
+    }
+
+    function syncPoolOptions() {
+      const on = holdForPool();
+      $("deleteFailed").disabled = !on;
+      $("deleteFailed").closest("label").style.opacity = on ? "1" : ".45";
+      $("poolHint").textContent = on
+        ? "先以禁用写入，测活成功才启用进路由池；失败的不会被调度。"
+        : "关闭后会直接启用进号池，不测活。";
+    }
+
+    function rememberCreated(name, index) {
+      if (!state.createdNames) state.createdNames = new Map();
+      const list = state.createdNames.get(name) || [];
+      if (!list.includes(index)) list.push(index);
+      state.createdNames.set(name, list);
     }
 
     function channelTemplate() {
@@ -795,9 +927,9 @@
         model_mapping: Object.keys(mapping).length ? JSON.stringify(mapping) : null,
         test_model: $("testModel").value.trim() || checkedModels()[0],
         priority: Number($("priority").value || 0),
-        weight: Number($("weight").value || 1),
+        weight: Number($("weight").value) || 0,
         auto_ban: 1,
-        status: 1,
+        status: holdForPool() ? 2 : 1,
         settings: JSON.stringify({ aws_key_type: $("keyType").value })
       };
     }
@@ -833,17 +965,26 @@
         return;
       }
       const mode = $("addMode").value;
+      const hold = holdForPool();
       state.running = true;
       $("startBtn").disabled = true;
       $("statOk").textContent = "0";
       $("statFail").textContent = "0";
       $("bar").style.width = "0%";
-      log(`开始上号，共 ${accounts.length} 个账号，模式 ${mode}`);
+      log(hold
+        ? `开始上号，共 ${accounts.length} 个账号。先禁用写入，测活通过后再加入号池。`
+        : `开始上号，共 ${accounts.length} 个账号，模式 ${mode}，直接启用进号池。`);
       try {
+        state.createdNames = new Map();
+        const beforeIds = new Set((await listAwsChannels()).map((item) => item.id));
         if (mode === "multi_to_single") await createMulti(accounts);
         else if (mode === "native_batch") await createNativeBatch(accounts);
         else await createSequential(accounts);
-        if ($("testAfter").checked) await testCreated(accounts);
+        if (hold) {
+          const created = (await listAwsChannels()).filter((item) => !beforeIds.has(item.id));
+          if (!created.length) log("没有找到新写入的渠道，无法测活入池", "bad");
+          else await admitAfterTest(created);
+        }
         await connect().catch(() => {});
       } finally {
         state.running = false;
@@ -851,14 +992,28 @@
       }
     }
 
-    function recordItem(index, account, data) {
-      const ok = !!data.success;
-      updateRow(index, ok, data.message || (ok ? `成功 · ${account.tag || "-"}` : "失败"));
-      $("statOk").textContent = String(Number($("statOk").textContent) + (ok ? 1 : 0));
-      $("statFail").textContent = String(Number($("statFail").textContent) + (ok ? 0 : 1));
+    function bumpProgress() {
       const done = Number($("statOk").textContent) + Number($("statFail").textContent);
       $("bar").style.width = `${Math.round(done / Math.max(state.accounts.length, 1) * 100)}%`;
-      log(`${account.name} ${ok ? "成功" : "失败"} 标签 ${account.tag || "-"} ${data.message || ""}`, ok ? "ok" : "bad");
+    }
+
+    function recordItem(index, account, data) {
+      const ok = !!data.success;
+      const hold = holdForPool();
+      if (ok && hold) {
+        rememberCreated(account.name, index);
+        rememberCreated(`${account.name} ${String(account.key || "").slice(0, 8)}`, index);
+        updateRow(index, null, "已写入（禁用），等待测活", "待测活");
+        log(`${account.name} 已写入，暂不入池`, "wait");
+        const waiting = pendingIndexes().length + Number($("statFail").textContent);
+        $("bar").style.width = `${Math.round(waiting / Math.max(state.accounts.length, 1) * 40)}%`;
+        return true;
+      }
+      updateRow(index, ok, data.message || (ok ? `已入池 · ${account.tag || "-"}` : "失败"), ok ? "已入池" : "失败");
+      $("statOk").textContent = String(Number($("statOk").textContent) + (ok ? 1 : 0));
+      $("statFail").textContent = String(Number($("statFail").textContent) + (ok ? 0 : 1));
+      bumpProgress();
+      log(`${account.name} ${ok ? "已入池" : "失败"} 标签 ${account.tag || "-"} ${data.message || ""}`, ok ? "ok" : "bad");
       return ok;
     }
 
@@ -900,22 +1055,164 @@
             tag: account.tag || null
           }
         });
-        items.forEach(({ acc, i }) => recordItem(i, acc, data));
+        items.forEach(({ acc, i }) => {
+          recordItem(i, acc, data);
+          if (data.success) rememberCreated(`${account.name} ${String(acc.key || "").slice(0, 8)}`, i);
+        });
       }
     }
 
-    async function testCreated(accounts) {
-      const names = new Set(accounts.map((item) => item.name));
-      const data = await proxy("/api/channel/?p=1&page_size=100&id_sort=true&type=33", "GET");
-      const payload = data.data || {};
-      const list = payload.items || (Array.isArray(payload) ? payload : []);
-      const testModel = $("testModel").value.trim();
-      for (const item of list) {
-        if (!names.has(item.name)) continue;
-        const path = testModel ? `/api/channel/test/${item.id}?model=${encodeURIComponent(testModel)}` : `/api/channel/test/${item.id}`;
-        const result = await proxy(path, "GET");
-        log(`测活 ${item.name} ${result.success ? "通过" : "失败"} ${result.message || ""} (${result.time || 0}s)`, result.success ? "ok" : "bad");
+    async function listAwsChannels() {
+      const items = [];
+      for (let page = 1; page <= 80; page++) {
+        const data = await proxy(`/api/channel/?p=${page}&page_size=100&id_sort=true&type=33`, "GET");
+        if (!data.success) throw new Error(data.message || "读取渠道列表失败");
+        const payload = data.data || {};
+        const list = payload.items || (Array.isArray(payload) ? payload : []);
+        if (!Array.isArray(list) || !list.length) break;
+        items.push(...list);
+        if (items.length >= (payload.total || 0) || list.length < 100) break;
       }
+      return items;
+    }
+
+    function pendingIndexes() {
+      return [...document.querySelectorAll("tr[data-index]")].map((row) => Number(row.dataset.index)).filter((index) => {
+        const cell = document.querySelector(`tr[data-index="${index}"]`)?.children[5];
+        return cell && cell.classList.contains("wait");
+      });
+    }
+
+    function findAccountIndexes(channel) {
+      const mapped = state.createdNames?.get(channel.name);
+      if (mapped?.length) return mapped;
+      const exact = [];
+      for (const [name, indexes] of state.createdNames || []) {
+        if (channel.name === name || (name.includes(" ") && channel.name === name)) exact.push(...indexes);
+      }
+      if (exact.length) return [...new Set(exact)];
+      const byKey = [];
+      state.accounts.forEach((acc, i) => {
+        const keyHead = String(acc.key || "").slice(0, 8);
+        if (keyHead && channel.name.endsWith(` ${keyHead}`)) byKey.push(i);
+      });
+      return byKey;
+    }
+
+    function markAccounts(indexes, ok, message, label) {
+      const unique = [...new Set(indexes)];
+      unique.forEach((index) => updateRow(index, ok, message, label));
+      $("statOk").textContent = String(Number($("statOk").textContent) + (ok ? unique.length : 0));
+      $("statFail").textContent = String(Number($("statFail").textContent) + (ok ? 0 : unique.length));
+      bumpProgress();
+    }
+
+    function channelModelList(item) {
+      const fromChannel = String(item.models || "").split(",").map((name) => name.trim()).filter(Boolean);
+      return fromChannel.length ? fromChannel : checkedModels();
+    }
+
+    function mappingForModels(models) {
+      const current = (() => { try { return parseModelMapping(); } catch { return {}; } })();
+      const mapping = {};
+      models.forEach((name) => {
+        mapping[name] = current[name] || toGlobalModelId(name);
+      });
+      return mapping;
+    }
+
+    async function testChannelModels(id, models) {
+      const passed = [];
+      const failed = [];
+      for (const model of models) {
+        const result = await proxy(`/api/channel/test/${id}?model=${encodeURIComponent(model)}`, "GET", undefined, 90);
+        if (result.success) {
+          passed.push(model);
+          log(`  ${model} 通过 ${result.time || 0}s`, "ok");
+        } else {
+          failed.push(model);
+          log(`  ${model} 失败 ${result.message || ""}`, "bad");
+        }
+      }
+      return { passed, failed };
+    }
+
+    async function keepPassedModels(item, passed) {
+      const mapping = mappingForModels(passed);
+      const preferred = $("testModel").value.trim();
+      const data = await proxy("/api/channel/", "PUT", {
+        id: item.id,
+        type: 33,
+        models: passed.join(","),
+        model_mapping: Object.keys(mapping).length ? JSON.stringify(mapping) : "",
+        test_model: passed.includes(preferred) ? preferred : passed[0]
+      });
+      return data;
+    }
+
+    async function admitAfterTest(created) {
+      const testModel = $("testModel").value.trim();
+      const removeFailed = $("deleteFailed").checked;
+      log(removeFailed
+        ? `开始测活 ${created.length} 个新渠道，将测完全部模型后再决定删除或入池`
+        : `开始测活 ${created.length} 个新渠道，通过后才会加入号池`);
+      const claimed = new Set();
+      for (const item of created) {
+        const models = channelModelList(item);
+        let indexes = findAccountIndexes(item).filter((index) => !claimed.has(index));
+        if (!indexes.length && created.length === 1) {
+          indexes = pendingIndexes().filter((index) => !claimed.has(index));
+        }
+        indexes.forEach((index) => claimed.add(index));
+        let passed = [];
+        let failed = [];
+        if (removeFailed) {
+          log(`测活 ${item.name} #${item.id}，共 ${models.length} 个模型`);
+          const result = await testChannelModels(item.id, models);
+          passed = result.passed;
+          failed = result.failed;
+        } else {
+          const model = testModel || models[0];
+          const path = model
+            ? `/api/channel/test/${item.id}?model=${encodeURIComponent(model)}`
+            : `/api/channel/test/${item.id}`;
+          const result = await proxy(path, "GET", undefined, 90);
+          if (result.success) passed = models.length ? models : [model].filter(Boolean);
+          else failed = models.length ? models : [model].filter(Boolean);
+          log(`测活 ${item.name} ${result.success ? "通过" : "失败"} ${result.message || ""} (${result.time || 0}s)`, result.success ? "ok" : "bad");
+        }
+        if (!passed.length) {
+          if (removeFailed) {
+            await proxy(`/api/channel/${item.id}`, "DELETE");
+            markAccounts(indexes, false, `全部模型失败，已删除渠道 #${item.id}`, "已删除");
+            log(`${item.name} 全部模型失败，已删除渠道`, "bad");
+          } else {
+            markAccounts(indexes, false, "测活失败，保持禁用，未入池", "未入池");
+            log(`${item.name} 测活失败，保持禁用`, "bad");
+          }
+          continue;
+        }
+        if (removeFailed && failed.length) {
+          const updated = await keepPassedModels(item, passed);
+          if (!updated.success) {
+            markAccounts(indexes, false, updated.message || "去掉失败模型失败", "启用失败");
+            log(`${item.name} 去掉失败模型失败 ${updated.message || ""}`, "bad");
+            continue;
+          }
+          log(`${item.name} 已去掉失败模型 ${failed.join(", ")}，保留 ${passed.join(", ")}`, "ok");
+        }
+        const enabled = await proxy(`/api/channel/${item.id}/status`, "POST", { status: 1 });
+        const ok = !!enabled.success;
+        const extra = failed.length ? `，已去掉 ${failed.length} 个失败模型` : "";
+        const message = ok
+          ? `测活通过 ${passed.length} 个模型，已加入号池 #${item.id}${extra}`
+          : (enabled.message || "测活通过，但启用失败");
+        markAccounts(indexes, ok, message, ok ? "已入池" : "启用失败");
+        log(`${item.name} ${message}`, ok ? "ok" : "bad");
+      }
+      pendingIndexes().forEach((index) => {
+        markAccounts([index], false, "未匹配到测活结果", "未入池");
+      });
     }
 
     async function createMulti(accounts) {
@@ -938,27 +1235,83 @@
           multi_key_mode: "random",
           channel
         });
-        items.forEach(({ i }) => updateRow(i, !!data.success, data.message || (data.success ? `已写入 ${channel.tag || channel.name}` : "失败")));
-        if (data.success) okCount += items.length;
-        else failCount += items.length;
-        log(data.success ? `已把 ${items.length} 个密钥写入 ${channel.name}，标签 ${channel.tag || "-"}` : (data.message || "失败"), data.success ? "ok" : "bad");
+        items.forEach(({ i }) => {
+          if (data.success) rememberCreated(channel.name, i);
+          if (data.success && holdForPool()) {
+            updateRow(i, null, "已写入（禁用），等待测活", "待测活");
+          } else {
+            updateRow(i, !!data.success, data.message || (data.success ? `已写入 ${channel.tag || channel.name}` : "失败"), data.success ? "已入池" : "失败");
+          }
+        });
+        if (data.success) {
+          if (!holdForPool()) okCount += items.length;
+        } else failCount += items.length;
+        log(data.success
+          ? (holdForPool()
+            ? `已把 ${items.length} 个密钥写入 ${channel.name}（禁用，待测活）`
+            : `已把 ${items.length} 个密钥写入 ${channel.name}，标签 ${channel.tag || "-"}`)
+          : (data.message || "失败"), data.success ? "ok" : "bad");
       }
-      $("statOk").textContent = String(okCount);
-      $("statFail").textContent = String(failCount);
-      $("bar").style.width = "100%";
-      if (okCount) await connect().catch(() => {});
+      if (!holdForPool()) {
+        $("statOk").textContent = String(okCount);
+        $("statFail").textContent = String(failCount);
+        $("bar").style.width = "100%";
+      } else {
+        $("statFail").textContent = String(failCount);
+      }
     }
 
     function loadLocal() {
       try {
         const saved = JSON.parse(localStorage.getItem("aws-batch-onboard") || "{}");
-        ["baseUrl", "token", "userId", "namePrefix", "group", "tag", "modelMapping"].forEach((id) => {
+        ["baseUrl", "token", "userId", "namePrefix", "group", "tag"].forEach((id) => {
           if (saved[id]) $(id).value = saved[id];
         });
       } catch {}
     }
 
     $("keyType").addEventListener("change", () => { updateFormatHint(); parseAccounts(); });
+    $("regionSearch").addEventListener("focus", () => {
+      $("regionSearch").select();
+      openRegionMenu();
+    });
+    $("regionSearch").addEventListener("input", () => {
+      $("regionMenu").hidden = false;
+      renderRegionMenu($("regionSearch").value);
+    });
+    $("regionSearch").addEventListener("keydown", (e) => {
+      const hits = state.regionHits || [];
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if ($("regionMenu").hidden) openRegionMenu();
+        state.regionActive = Math.min(hits.length - 1, (state.regionActive || 0) + 1);
+        highlightRegionOption();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        state.regionActive = Math.max(0, (state.regionActive || 0) - 1);
+        highlightRegionOption();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const item = hits[state.regionActive] || hits[0];
+        if (item) {
+          setRegionValue(item.value);
+          closeRegionMenu();
+        }
+      } else if (e.key === "Escape") {
+        closeRegionMenu();
+        $("regionSearch").blur();
+      }
+    });
+    $("regionMenu").addEventListener("mousedown", (e) => {
+      const btn = e.target.closest(".region-option");
+      if (!btn) return;
+      e.preventDefault();
+      setRegionValue(btn.dataset.value);
+      closeRegionMenu();
+    });
+    document.addEventListener("mousedown", (e) => {
+      if (!e.target.closest(".region-combo")) closeRegionMenu();
+    });
     $("region").addEventListener("change", () => {
       syncNamePrefixField();
       updateFormatHint();
@@ -966,13 +1319,28 @@
     });
     $("namePrefix").addEventListener("input", () => { updateNameHint(); parseAccounts(); });
     $("tag").addEventListener("input", parseAccounts);
+    $("testAfter").addEventListener("change", syncPoolOptions);
+    $("autoMap").addEventListener("change", () => {
+      if ($("autoMap").checked) fillMapping();
+    });
     $("selectLatestBtn").addEventListener("click", () => setModelSelection((name) => LATEST_MODELS.has(name)));
     $("selectAllBtn").addEventListener("click", () => setModelSelection(() => true));
     $("clearModelsBtn").addEventListener("click", () => setModelSelection(() => false));
-    $("genMapBtn").addEventListener("click", () => { fillMapping(); toast("已根据已选模型生成映射"); });
-    $("clearMapBtn").addEventListener("click", () => { $("modelMapping").value = ""; updateMapHint(); });
-    $("modelMapping").addEventListener("input", updateMapHint);
-    $("extraModels").addEventListener("input", () => { if ($("autoMap").checked) fillMapping(); });
+    $("genMapBtn").addEventListener("click", () => { fillMapping(); toast("已根据已选模型更新映射"); });
+    $("clearMapBtn").addEventListener("click", () => {
+      if ($("autoMap").checked) {
+        fillMapping();
+        toast("已按当前勾选更新映射");
+        return;
+      }
+      $("modelMapping").value = "";
+      updateMapHint();
+    });
+    $("modelMapping").addEventListener("input", () => {
+      $("autoMap").checked = false;
+      updateMapHint();
+    });
+    $("extraModels").addEventListener("input", syncMapping);
     $("parseBtn").addEventListener("click", parseAccounts);
     $("clearBtn").addEventListener("click", () => {
       $("rawKeys").value = "";
@@ -1016,10 +1384,12 @@
     renderChips();
     updateFormatHint();
     loadLocal();
+    $("autoMap").checked = true;
+    $("testAfter").checked = true;
     syncNamePrefixField();
+    syncPoolOptions();
     parseAccounts();
-    if (!$("modelMapping").value.trim()) fillMapping();
-    else updateMapHint();
+    fillMapping();
   </script>
 </body>
 </html>

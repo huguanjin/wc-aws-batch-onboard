@@ -1,14 +1,11 @@
 # 用法：
-#   1. 复制 .env.example 为 .env，填好 GHCR_OWNER / GHCR_IMAGE
+#   1. docker login ghcr.io -u huguanjin   （包是私有的，需要带 read:packages 权限的 PAT）
 #   2. docker compose pull && docker compose up -d
 #   3. 浏览器打开 http://127.0.0.1:8787
-#
-# 私有镜像需要先登录：docker login ghcr.io -u <用户名>
-# （密码用带 read:packages 权限的 GitHub PAT）
 
 services:
   aws-batch-onboard:
-    image: ghcr.io/${GHCR_OWNER:?请在 .env 中设置 GHCR_OWNER}/${GHCR_IMAGE:-aws-batch-onboard}:${IMAGE_TAG:-latest}
+    image: ghcr.io/huguanjin/wc-aws-batch-onboard:latest
 
     # 本地改代码后想直接构建，注释掉上面的 image，启用下面这行：
     # build: ./aws-batch-onboard
@@ -16,10 +13,10 @@ services:
     container_name: aws-batch-onboard
     restart: unless-stopped
 
-    # 只绑定到宿主机回环地址。该服务持有 New API 管理员令牌，
-    # 需要对外访问时请改成 "8787:8787" 并在前面加反代 + 鉴权。
+    # 对外暴露。该服务持有 New API 管理员令牌且自身无鉴权，
+    # 公网可达前请务必在前面加反向代理 + 访问控制（见文件顶部说明）。
     ports:
-      - "127.0.0.1:8787:8787"
+      - "8787:8787"
 
     environment:
       HOST: 0.0.0.0
